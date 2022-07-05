@@ -1,6 +1,7 @@
 import {
   GraphQLServer
 } from 'graphql-yoga'
+import uuidv4 from 'uuid/v4'
 
 // DEMO
 const users = [{
@@ -71,6 +72,31 @@ const typeDefs = `
     comments: [Comment!]!
   }
 
+  type Mutation {
+    createUser(data: CreateUserInput): User!
+    createPost(data: CreatePostInput): Post!
+    createComment(data: CreateCommentInput): Comment!
+  }
+
+  input CreateUserInput {
+    name: String!
+    email: String!
+    age:Int
+  }
+
+  input CreatePostInput {
+    title: String!
+    body: String!
+    published: Boolean!
+    author: ID!
+  }
+
+  input CreateCommentInput {
+    text: String!
+    author: ID!
+    post: ID!
+  }
+
   type User {
     id: ID!
     name: String!
@@ -120,6 +146,69 @@ const resolvers = {
     },
     comments (_parent, _args, _ctx, _info) {
       return comments
+    },
+  },
+  Mutation: {
+    createUser (_parent, args, _ctx, _info) {
+      const { name, email, age } = args.data
+      console.log('args', args)
+      console.log('{ name, email, age }', { name, email, age })
+      const emailTaken = users.some((user) => {
+        return user.email === email
+      })
+
+      if (emailTaken) throw new Error("Email Taken")
+
+      const user = {
+        id: uuidv4(),
+        name, email, age
+      }
+
+      users.push(user)
+
+      return user
+    },
+    createPost(_parent, args, _ctx, _info) {
+      const { title, body, published, author } = args.data
+      console.log('args', args)
+      const userExist = users.some((user) => {
+        return user.id === author
+      })
+
+      if (!userExist) throw new Error("User not found")
+
+      const post = {
+        id: uuidv4(),
+        title, body, published, author,
+        comments: [],
+      }
+
+      posts.push(post)
+      return post
+    },
+    createComment(_parent, args, _ctx, _info) {
+      const { text, author, post } = args.data
+      console.log('Comment, arags', args)
+      const userExist = users.some((user) => {
+        return user.id === author
+      })
+
+      const postExist = posts.some((userPost) => {
+        return userPost.id === post
+      })
+
+      if (!userExist) throw new Error("User not found")
+      if (!postExist) throw new Error("Post not found")
+
+      const comment = {
+        id: uuidv4(),
+        text,
+        author,
+        post
+      }
+
+      comments.push(comment)
+      return comment
     },
   },
   Post: {
